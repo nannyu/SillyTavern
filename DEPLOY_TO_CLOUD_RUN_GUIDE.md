@@ -30,19 +30,81 @@
 
 请按照以下步骤操作：
 
+**第 0 步：修改 SillyTavern 配置 (重要!)**
+
+为了让 SillyTavern 能够在 Cloud Run 上正确运行并进行访问控制，我们需要修改其配置文件。请根据您的需求选择以下一种方案进行配置：
+
+1.  **找到或创建配置文件:** 检查项目根目录下是否存在 `config/config.yaml` 文件。如果不存在，请先将 `default/config.yaml` 文件**复制**一份到 `config/` 目录下（您可能需要先创建 `config` 目录）。**后续修改请针对 `config/config.yaml` 文件。**
+
+2.  **选择配置方案 (选择一种):**
+
+    **方案 0：无访问控制 (!!! 极不推荐用于公开部署 !!!)**
+    *   说明: 任何人只要知道 URL 就可以访问，存在严重安全风险。
+    *   配置:
+        *   `listen: true`
+        *   `whitelistMode: false`
+        *   `basicAuthMode: false`
+        *   `enableUserAccounts: false`
+        *   `dataRoot: /gcs/data` (确保)
+
+    **方案 1：基本密码保护 (推荐，简单且资源消耗较低)**
+    *   说明: 所有访问者共享同一个用户名和密码。
+    *   配置:
+        *   `listen: true`
+        *   `whitelistMode: false`
+        *   `basicAuthMode: true`
+        *   `basicAuthUser:` 设置 `username` 和 `password` (请牢记)
+        *   `enableUserAccounts: false`
+        *   `dataRoot: /gcs/data` (确保)
+
+    **方案 2：多用户账户系统 (推荐，灵活但可能增加费用)**
+    *   说明: 显示登录页面，允许多个独立账户。账户管理通常在应用内进行。
+    *   配置:
+        *   `listen: true`
+        *   `whitelistMode: false`
+        *   `basicAuthMode: false`
+        *   `enableUserAccounts: true`
+        *   `enableDiscreetLogin: false` (可选 `true`，隐藏登录页用户列表)
+        *   `dataRoot: /gcs/data` (确保)
+    *   **重要提示:**
+        *   **资源消耗与费用:** 多用户可能显著增加资源使用，超出免费额度产生费用。
+        *   **用户管理:** 账户创建/密码管理在 SillyTavern 应用界面内操作。
+
+    **方案 3：高级 - Authelia 单点登录**
+    *   说明: 使用外部 Authelia 服务进行认证，配置复杂。
+    *   配置: `listen: true`, `whitelistMode: false`, `autheliaAuth: true`, 通常也需 `enableUserAccounts: true`。
+    *   **提示:** 需要额外部署和配置 Authelia 及反向代理，超出本指南范围。
+
+3.  **根据所选方案编辑并保存 `config/config.yaml` 文件。**
+
 **第 1 步：构建 Docker 镜像**
 
 Docker 镜像就像一个包含了 SillyTavern 应用程序及其运行环境的包裹。
 
 1.  打开您的终端 (Terminal / Command Prompt)。
 2.  使用 `cd` 命令进入到 SillyTavern 项目的根目录（包含 `Dockerfile` 文件的那个目录）。
-3.  运行以下命令来构建镜像：
-    ```bash
-    docker build -t sillytavern .
-    ```
-    *   `-t sillytavern` 给镜像起个名字叫 `sillytavern`。
-    *   `.` 表示使用当前目录下的 `Dockerfile` 来构建。
-    *   这个过程可能需要几分钟时间，具体取决于您的网络和电脑性能。
+3.  **选择适合您计算机架构的构建命令:**
+    *   **如果您使用的是 Apple Silicon Mac (M1, M2, M3 等 ARM64 架构):**
+        Google Cloud Run 通常运行在 AMD64 (x86_64) 架构上。为了避免部署时出现 `exec format error`，您需要明确告诉 Docker 构建一个适用于 AMD64 的镜像。请使用以下 `docker buildx` 命令：
+        ```bash
+        docker buildx build --platform linux/amd64 -t sillytavern --load .
+        ```
+        *   `buildx build`: 使用 buildx 进行跨平台构建。
+        *   `--platform linux/amd64`: 指定目标平台为 Cloud Run 所需的 linux/amd64。
+        *   `-t sillytavern`: 给镜像命名。
+        *   `--load`: 将构建好的 AMD64 镜像加载到本地 Docker 中，以便后续推送。
+        *   `.`: 使用当前目录作为构建上下文。
+        *   *(注意: 首次运行 buildx 可能需要下载额外组件)*
+
+    *   **如果您使用的是 Windows PC 或 Intel/AMD Linux (AMD64 / x86_64 架构):**
+        您的计算机架构与 Cloud Run 默认架构一致，可以直接使用标准的 `docker build` 命令：
+        ```bash
+        docker build -t sillytavern .
+        ```
+        *   `-t sillytavern`: 给镜像起个名字叫 `sillytavern`。
+        *   `.`: 表示使用当前目录下的 `Dockerfile` 来构建。
+
+4.  **等待构建完成:** 这个过程可能需要几分钟时间，具体取决于您的网络和电脑性能。
 
 **第 2 步：设置 Google Cloud Artifact Registry**
 
