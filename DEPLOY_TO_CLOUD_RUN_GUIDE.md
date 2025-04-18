@@ -47,8 +47,8 @@
         *   `enableUserAccounts: false`
         *   `dataRoot: /gcs/data` (确保)
 
-    **方案 1：基本密码保护 (推荐，简单且资源消耗较低)**
-    *   说明: 所有访问者共享同一个用户名和密码。
+    **方案 1：基本密码保护 (稳定推荐)**
+    *   说明: 所有访问者共享同一个用户名和密码。**这是经过验证在此 Cloud Run + GCS FUSE 环境下能够稳定运行的推荐方案。**
     *   配置:
         *   `listen: true`
         *   `whitelistMode: false`
@@ -57,18 +57,20 @@
         *   `enableUserAccounts: false`
         *   `dataRoot: /gcs/data` (确保)
 
-    **方案 2：多用户账户系统 (推荐，灵活但可能增加费用)**
+    **方案 2：多用户账户系统 (实验性 - 可能失败)**
     *   说明: 显示登录页面，允许多个独立账户。账户管理通常在应用内进行。
-    *   配置:
+    *   **!!! 重要警告 !!!**: 在当前的 Cloud Run + GCS FUSE 环境下，启用此模式**很可能导致部署失败** (出现容器启动后立即 `exit(1)` 的错误)。这可能与 SillyTavern 初始化多用户系统时与 GCS FUSE 文件系统的交互有关。**除非您准备进行深入调试或查找特定解决方案，否则不建议在 Cloud Run + GCS FUSE 上使用此方案。**
+    *   配置 (如果仍要尝试):
         *   `listen: true`
         *   `whitelistMode: false`
         *   `basicAuthMode: false`
         *   `enableUserAccounts: true`
-        *   `enableDiscreetLogin: false` (可选 `true`，隐藏登录页用户列表)
+        *   `enableDiscreetLogin: false` (可选 `true`)
         *   `dataRoot: /gcs/data` (确保)
-    *   **重要提示:**
+    *   **提示 (如果尝试方案二):**
         *   **资源消耗与费用:** 多用户可能显著增加资源使用，超出免费额度产生费用。
-        *   **用户管理:** 账户创建/密码管理在 SillyTavern 应用界面内操作。
+        *   **用户管理:** 账户创建/密码管理需在应用界面内操作 (如果能成功启动)。
+        *   **替代方案:** 如果必须使用多用户模式，建议查阅 SillyTavern 官方文档/社区获取针对容器化或网络文件系统的指导，或考虑更传统的部署方式，如在 Google Compute Engine (GCE) 虚拟机上使用持久化磁盘代替 GCS FUSE。
 
     **方案 3：高级 - Authelia 单点登录**
     *   说明: 使用外部 Authelia 服务进行认证，配置复杂。
