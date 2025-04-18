@@ -108,7 +108,7 @@ Artifact Registry 是 Google Cloud 上存放 Docker 镜像的地方。
         --region=YOUR_REGION \
         --port=8080 \
         --allow-unauthenticated \
-        --add-volume=name=gcs-data-vol,gcs-bucket=YOUR_UNIQUE_BUCKET_NAME \
+        --add-volume=name=gcs-data-vol,type=cloud-storage,bucket=YOUR_UNIQUE_BUCKET_NAME \
         --add-volume-mount=volume=gcs-data-vol,mount-path=/gcs/data \
         --min-instances=1 # 可选：保持至少一个实例运行以减少冷启动，但会产生少量持续费用
     # ---------- 请将以下占位符替换为您的实际值 ----------
