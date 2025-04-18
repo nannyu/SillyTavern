@@ -38,28 +38,36 @@
 
 2.  **选择配置方案 (选择一种):**
 
-    **方案 0：无访问控制 (!!! 极不推荐用于公开部署 !!!)**
-    *   说明: 任何人只要知道 URL 就可以访问，存在严重安全风险。
-    *   配置:
-        *   `listen: true`
-        *   `whitelistMode: false`
-        *   `basicAuthMode: false`
-        *   `enableUserAccounts: false`
-        *   `dataRoot: /gcs/data` (确保)
-
-    **方案 1：基本密码保护 (稳定推荐)**
-    *   说明: 所有访问者共享同一个用户名和密码。**这是经过验证在此 Cloud Run + GCS FUSE 环境下能够稳定运行的推荐方案。**
+    **方案 1：基本密码保护 (简单稳定)**
+    *   说明: 所有访问者共享同一个全局用户名和密码。配置简单，稳定可靠。
     *   配置:
         *   `listen: true`
         *   `whitelistMode: false`
         *   `basicAuthMode: true`
-        *   `basicAuthUser:` 设置 `username` 和 `password` (请牢记)
+        *   `basicAuthUser:`
+                username：user
+                password：password
         *   `enableUserAccounts: false`
         *   `dataRoot: /gcs/data` (确保)
 
-    **方案 2：多用户账户系统 (实验性 - 可能失败)**
-    *   说明: 显示登录页面，允许多个独立账户。账户管理通常在应用内进行。
-    *   **!!! 重要警告 !!!**: 在当前的 Cloud Run + GCS FUSE 环境下，启用此模式**很可能导致部署失败** (出现容器启动后立即 `exit(1)` 的错误)。这可能与 SillyTavern 初始化多用户系统时与 GCS FUSE 文件系统的交互有关。**除非您准备进行深入调试或查找特定解决方案，否则不建议在 Cloud Run + GCS FUSE 上使用此方案。**
+    **方案 2：两层认证 (推荐，增强保护)**
+    *   说明: 提供两层保护。第一层是全局基本认证密码，第二层是 SillyTavern 内部的用户账户登录。**这是经过验证在此 Cloud Run + GCS FUSE 环境下可行的方案。**
+    *   配置:
+        *   `listen: true`
+        *   `whitelistMode: false`
+        *   `basicAuthMode: true`
+        *   `basicAuthUser:` 设置全局 `username` 和 `password` (例如 `user`/`password`, 用于第一层认证)
+        *   `enableUserAccounts: true`
+        *   `enableDiscreetLogin: true` (推荐，隐藏登录页用户列表)
+        *   `perUserBasicAuth: false` (重要: 确保基本认证使用全局凭据)
+        *   `dataRoot: /gcs/data` (确保)
+    *   **登录流程:**
+        1.  访问 URL 时，浏览器弹出基本认证窗口，输入全局 `username`/`password`。
+        2.  通过后，显示 SillyTavern 登录页面，输入 SillyTavern 内部账户的用户名/密码 (首次部署后通常可使用 `default-user` 账户登录，**强烈建议登录后立即在管理面板修改其密码**)。
+
+    **方案 3：多用户账户系统 (实验性 - 可能失败)**
+    *   说明: 只有 SillyTavern 的登录页面，没有基本认证。允许多个独立账户。
+    *   **!!! 重要警告 !!!**: 在之前的测试中，此模式（`basicAuthMode: false`, `enableUserAccounts: true`）在 Cloud Run + GCS FUSE 环境下**导致了部署失败** (容器 `exit(1)` 错误)。**除非您准备深入调试或查找特定解决方案，否则不建议使用此方案。**
     *   配置 (如果仍要尝试):
         *   `listen: true`
         *   `whitelistMode: false`
@@ -72,7 +80,16 @@
         *   **用户管理:** 账户创建/密码管理需在应用界面内操作 (如果能成功启动)。
         *   **替代方案:** 如果必须使用多用户模式，建议查阅 SillyTavern 官方文档/社区获取针对容器化或网络文件系统的指导，或考虑更传统的部署方式，如在 Google Compute Engine (GCE) 虚拟机上使用持久化磁盘代替 GCS FUSE。
 
-    **方案 3：高级 - Authelia 单点登录**
+    **方案 0：无访问控制 (!!! 极不推荐用于公开部署 !!!)**
+    *   说明: 任何人只要知道 URL 就可以访问，存在严重安全风险。
+    *   配置:
+        *   `listen: true`
+        *   `whitelistMode: false`
+        *   `basicAuthMode: false`
+        *   `enableUserAccounts: false`
+        *   `dataRoot: /gcs/data` (确保)
+
+    **方案 4：高级 - Authelia 单点登录**
     *   说明: 使用外部 Authelia 服务进行认证，配置复杂。
     *   配置: `listen: true`, `whitelistMode: false`, `autheliaAuth: true`, 通常也需 `enableUserAccounts: true`。
     *   **提示:** 需要额外部署和配置 Authelia 及反向代理，超出本指南范围。
