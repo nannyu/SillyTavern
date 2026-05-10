@@ -26,6 +26,7 @@ public/stats.json
 /docker/user
 /docker/extensions
 /docker/data
+/docker/dist
 .DS_Store
 public/settings.json
 /thumbnails
@@ -54,4 +55,6 @@ public/scripts/extensions/third-party
 .aider*
 .env
 /StartDev.bat
-
+yarn.lock
+*.code-workspace
+test-results/
